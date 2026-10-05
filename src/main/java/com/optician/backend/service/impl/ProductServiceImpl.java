@@ -300,23 +300,14 @@ public class ProductServiceImpl implements ProductService {
      * immediately ready and published for client virtual try-on.
      */
     private void autoGenerate3dAssetsForProduct(Product product) {
-        if (product == null) return;
-
-        List<ProductVariant> variants = product.getVariants();
-        if (variants == null || variants.isEmpty()) {
-            // Create a default variant for 3D try-on if none exists
-            ProductVariant defaultVariant = ProductVariant.builder()
-                    .product(product)
-                    .sku(product.getReference() + "-DEF")
-                    .color("Standard")
-                    .build();
-            defaultVariant = variantRepository.save(defaultVariant);
-            variants = List.of(defaultVariant);
+        if (product == null || product.getVariants() == null || product.getVariants().isEmpty()) {
+            return;
         }
 
-        for (ProductVariant variant : variants) {
+        for (ProductVariant variant : product.getVariants()) {
+            if (variant == null || variant.getId() == null) continue;
             // Check if published 3D asset already exists
-            boolean hasPublished = assetRepository.findFirstByVariantIdAndStatus(variant.getId(), com.optician.backend.model.enums.TryOnAssetStatus.PUBLISHED).isPresent();
+            boolean hasPublished = assetRepository != null && assetRepository.findFirstByVariantIdAndStatus(variant.getId(), com.optician.backend.model.enums.TryOnAssetStatus.PUBLISHED).isPresent();
             if (!hasPublished) {
                 String shape = product.getFrameShape() != null ? product.getFrameShape().name().toLowerCase() : "rectangle";
                 String modelUrl = product.getModel3dUrl() != null && !product.getModel3dUrl().isBlank()
@@ -339,7 +330,9 @@ public class ProductServiceImpl implements ProductService {
                         .rotationZ(0.0)
                         .build();
 
-                assetRepository.save(asset);
+                if (assetRepository != null) {
+                    assetRepository.save(asset);
+                }
                 log.info(">>> 3D Asset généré et publié automatiquement pour le produit '{}' (Variant ID: {})", product.getName(), variant.getId());
             }
         }
