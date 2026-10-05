@@ -1,18 +1,20 @@
 package com.optician.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.optician.backend.model.enums.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * DTO de création / mise à jour d'un Product (MODÈLE COMMERCIAL).
  *
- * Aucune donnée spécifique à une déclinaison n'est attendue ici :
- * SKU, barcode, couleur, prix et dimensions appartiennent aux variantes
- * ({@link ProductVariantRequestDto}).
+ * Accepte à la fois la structure canonique et les alias du frontend Angular
+ * (sku, type, shape, optical, etc.).
  */
 @Getter
 @Setter
@@ -22,6 +24,7 @@ import java.util.List;
 public class ProductRequestDto {
 
     /** Référence commerciale du modèle. Optionnelle : auto-générée si absente. */
+    @JsonAlias({"sku", "reference"})
     @Size(max = 255, message = "Reference must not exceed 255 characters")
     private String reference;
 
@@ -36,6 +39,7 @@ public class ProductRequestDto {
     private String description;
 
     @NotNull(message = "Product type is mandatory")
+    @JsonAlias({"type", "productType"})
     private ProductType productType;
 
     private Long categoryId;
@@ -58,6 +62,7 @@ public class ProductRequestDto {
     @Deprecated
     private String supplier;
 
+    @JsonAlias({"shape", "frameShape"})
     private FrameShape frameShape;
 
     @Builder.Default
@@ -92,4 +97,35 @@ public class ProductRequestDto {
     private List<ProductVariantRequestDto> variants;
 
     private List<ProductImageDto> images;
+
+    @JsonProperty("optical")
+    public void setOptical(Map<String, Object> optical) {
+        if (optical != null) {
+            if (this.frameShape == null && optical.get("shape") != null) {
+                this.frameShape = FrameShape.fromString(String.valueOf(optical.get("shape")));
+            }
+            if (this.material == null && optical.get("material") != null) {
+                this.material = String.valueOf(optical.get("material"));
+            }
+        }
+    }
+
+    @JsonProperty("category")
+    public void setCategory(Object cat) {
+        if (cat != null && this.categoryId == null) {
+            try {
+                this.categoryId = Long.parseLong(String.valueOf(cat));
+            } catch (NumberFormatException ignored) {}
+        }
+    }
+
+    @JsonProperty("brandId")
+    public void setBrandId(Object bId) {
+        if (bId != null) {
+            try {
+                this.brandId = Long.parseLong(String.valueOf(bId));
+            } catch (NumberFormatException ignored) {}
+        }
+    }
 }
+

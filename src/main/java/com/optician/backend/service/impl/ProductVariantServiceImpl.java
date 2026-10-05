@@ -12,6 +12,9 @@ import com.optician.backend.repository.ProductRepository;
 import com.optician.backend.repository.ProductVariantRepository;
 import com.optician.backend.service.ProductAuditService;
 import com.optician.backend.service.ProductVariantService;
+import com.optician.backend.model.VirtualTryOnAsset;
+import com.optician.backend.model.enums.TryOnAssetStatus;
+import com.optician.backend.repository.VirtualTryOnAssetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,7 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
+    private final VirtualTryOnAssetRepository assetRepository;
     private final ProductVariantMapper variantMapper;
     private final ProductAuditService auditService;
 
@@ -47,9 +51,42 @@ public class ProductVariantServiceImpl implements ProductVariantService {
 
         ProductVariant saved = variantRepository.save(variant);
 
+        autoGenerate3dAssetForVariant(product, saved);
+
         auditService.logAudit(AuditAction.CREATE, "ProductVariant", saved.getId(), null, "Created variant SKU " + saved.getSku());
 
         return variantMapper.toDto(saved);
+    }
+
+    private void autoGenerate3dAssetForVariant(Product product, ProductVariant variant) {
+        if (product == null || variant == null || variant.getId() == null) return;
+        if (assetRepository == null) return;
+
+        boolean hasPublished = assetRepository.findFirstByVariantIdAndStatus(variant.getId(), TryOnAssetStatus.PUBLISHED).isPresent();
+        if (!hasPublished) {
+            String shape = product.getFrameShape() != null ? product.getFrameShape().name().toLowerCase() : "rectangle";
+            String modelUrl = product.getModel3dUrl() != null && !product.getModel3dUrl().isBlank()
+                    ? product.getModel3dUrl()
+                    : "/uploads/models/procedural_" + shape + ".glb";
+
+            VirtualTryOnAsset asset = VirtualTryOnAsset.builder()
+                    .variant(variant)
+                    .modelUrl(modelUrl)
+                    .thumbnailUrl(product.getImageUrl())
+                    .format("GLB")
+                    .status(TryOnAssetStatus.PUBLISHED)
+                    .version(1)
+                    .scale(1.0)
+                    .positionX(0.0)
+                    .positionY(0.0)
+                    .positionZ(0.0)
+                    .rotationX(0.0)
+                    .rotationY(0.0)
+                    .rotationZ(0.0)
+                    .build();
+
+            assetRepository.save(asset);
+        }
     }
 
     @Override

@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -107,10 +108,24 @@ public class VirtualTryOnAssetServiceImpl implements VirtualTryOnAssetService {
         // Save reference image locally
         MultipartFile primaryImage = images.get(0);
         String tempImgFilename = UUID.randomUUID() + "_" + sanitizeFilename(primaryImage.getOriginalFilename());
+        Path tempImgPath = Paths.get("uploads/temp-images", tempImgFilename);
+        try {
+            if (!Files.exists(tempImgPath.getParent())) {
+                Files.createDirectories(tempImgPath.getParent());
+            }
+            try (InputStream is = primaryImage.getInputStream()) {
+                Files.copy(is, tempImgPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            log.warn("Impossible de sauvegarder l'image temporaire pour l'IA 3D: {}", e.getMessage());
+        }
+
         String generatedGlbName = "gen_3d_" + UUID.randomUUID() + ".glb";
         String modelUrl = "/uploads/models/" + generatedGlbName;
+        String shapeStr = (variant.getProduct() != null && variant.getProduct().getFrameShape() != null)
+                ? variant.getProduct().getFrameShape().name() : "CARRE";
 
-        // Save generated model placeholder
+        // Save generated model asset record
         VirtualTryOnAsset asset = VirtualTryOnAsset.builder()
                 .variant(variant)
                 .modelUrl(modelUrl)
@@ -130,8 +145,8 @@ public class VirtualTryOnAssetServiceImpl implements VirtualTryOnAssetService {
         VirtualTryOnAsset saved = assetRepository.save(asset);
         auditService.logAudit(AuditAction.CREATE, "VirtualTryOnAsset", saved.getId(), null, "Génération 3D IA initiée depuis " + images.size() + " image(s)");
 
-        // Trigger background local Python SPAR3D/TripoSR worker or procedural GLB generator
-        generateGlbLocallyAsync(saved.getId(), generatedGlbName);
+        // Trigger background local Python SPAR3D/TripoSR worker or 3D mesh reconstructor
+        generateGlbLocallyAsync(saved.getId(), generatedGlbName, tempImgPath.toString(), shapeStr);
 
         return assetMapper.toDto(saved);
     }
@@ -265,7 +280,7 @@ public class VirtualTryOnAssetServiceImpl implements VirtualTryOnAssetService {
         return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
-    private void generateGlbLocallyAsync(Long assetId, String targetGlbFilename) {
+    private void generateGlbLocallyAsync(Long assetId, String targetGlbFilename, String inputImgPath, String shapeStr) {
         new Thread(() -> {
             try {
                 Path uploadPath = Paths.get(UPLOAD_DIR);
@@ -274,15 +289,22 @@ public class VirtualTryOnAssetServiceImpl implements VirtualTryOnAssetService {
                 }
                 File targetFile = uploadPath.resolve(targetGlbFilename).toFile();
 
-                // Call local Python SPAR3D/TripoSR generator script if present
                 File pythonScript = new File("scripts/reconstruct_3d.py");
                 if (pythonScript.exists()) {
-                    ProcessBuilder pb = new ProcessBuilder("python3", "scripts/reconstruct_3d.py", "--output", targetFile.getAbsolutePath());
+                    List<String> cmd = new ArrayList<>(List.of("python3", "scripts/reconstruct_3d.py", "--output", targetFile.getAbsolutePath()));
+                    if (inputImgPath != null && new File(inputImgPath).exists()) {
+                        cmd.add("--input");
+                        cmd.add(inputImgPath);
+                    }
+                    if (shapeStr != null && !shapeStr.isBlank()) {
+                        cmd.add("--shape");
+                        cmd.add(shapeStr);
+                    }
+                    ProcessBuilder pb = new ProcessBuilder(cmd);
                     Process process = pb.start();
                     int exitCode = process.waitFor();
                     log.info("Processus Python local d'IA 3D terminé avec le code exit: {}", exitCode);
                 } else {
-                    // Create valid minimum GLB placeholder binary locally
                     writeMinimalGlbPlaceholder(targetFile);
                 }
             } catch (Exception e) {

@@ -8,11 +8,14 @@ import com.optician.backend.model.Brand;
 import com.optician.backend.model.Category;
 import com.optician.backend.model.Product;
 import com.optician.backend.model.ProductVariant;
+import com.optician.backend.model.VirtualTryOnAsset;
 import com.optician.backend.model.enums.AuditAction;
 import com.optician.backend.model.enums.FrameShape;
 import com.optician.backend.model.enums.Gender;
 import com.optician.backend.model.enums.ProductStatus;
+import com.optician.backend.model.enums.ProductType;
 import com.optician.backend.model.enums.TargetAge;
+import com.optician.backend.model.enums.TryOnAssetStatus;
 import com.optician.backend.repository.*;
 import com.optician.backend.service.ProductAuditService;
 import com.optician.backend.service.ProductService;
@@ -43,7 +46,7 @@ public class ProductServiceImpl implements ProductService {
     private final BrandRepository brandRepository;
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository variantRepository;
-    private final VirtualTryOnAssetRepository assetRepository;
+    private final VirtualTryOnAssetRepository tryOnAssetRepository;
     private final ProductMapper productMapper;
     private final ProductVariantMapper variantMapper;
     private final ProductAuditService auditService;
@@ -61,19 +64,12 @@ public class ProductServiceImpl implements ProductService {
 
         Product product = productMapper.toEntity(dto);
         product.setReference(targetRef);
+        product.setTryOn3dAvailable(true);
+        product.setVirtualTryOnEnabled(true);
+
         if (dto.getStatus() != null) {
             product.setStatus(dto.getStatus());
             product.setActive(dto.getStatus() == ProductStatus.ACTIF);
-        }
-
-        // Auto-enable 3D try-on for product
-        product.setTryOn3dAvailable(true);
-        product.setVirtualTryOnEnabled(true);
-        if (product.getFrameShape() == null) {
-            product.setFrameShape(FrameShape.RECTANGULAIRE);
-        }
-        if (product.getModel3dConfig() == null || product.getModel3dConfig().isBlank()) {
-            product.setModel3dConfig("{\"frameShape\":\"" + product.getFrameShape().name() + "\",\"material\":\"" + (product.getMaterial() != null ? product.getMaterial() : "ACETATE") + "\",\"scale\":1.0}");
         }
 
         resolveBrandAndCategory(dto, product);
@@ -93,10 +89,13 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        Product saved = productRepository.save(product);
+        if (product.getProductType() != ProductType.CONTACT_LENSES) {
+            product.setTryOn3dAvailable(true);
+            product.setVirtualTryOnEnabled(true);
+        }
 
-        // Auto-generate and publish 3D Try-On Asset for each variant of the created product
-        autoGenerate3dAssetsForProduct(saved);
+        Product saved = productRepository.save(product);
+        ensure3dTryOnAssetsCreated(saved);
 
         auditService.logAudit(AuditAction.CREATE, "Product", saved.getId(), null,
                 "Created product " + saved.getName() + " (REF: " + saved.getReference() + ")");
@@ -180,9 +179,6 @@ public class ProductServiceImpl implements ProductService {
         resolveBrandAndCategory(dto, product);
 
         Product saved = productRepository.save(product);
-
-        // Auto-generate and publish 3D Try-On Asset for each variant of the updated product
-        autoGenerate3dAssetsForProduct(saved);
 
         auditService.logAudit(AuditAction.UPDATE, "Product", saved.getId(), oldVal, "Updated product " + saved.getName());
 
@@ -274,67 +270,80 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.toDto(saved);
     }
 
-    private void resolveBrandAndCategory(ProductRequestDto dto, Product product) {
-        if (dto.getBrandId() != null) {
-            Brand brand = brandRepository.findById(dto.getBrandId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Brand not found with id: " + dto.getBrandId()));
-            product.setBrandEntity(brand);
+    private void ensure3dTryOnAssetsCreated(Product product) {
+        if (product.getProductType() == ProductType.CONTACT_LENSES) return;
+
+        product.setTryOn3dAvailable(true);
+        product.setVirtualTryOnEnabled(true);
+        if (product.getModel3dUrl() == null || product.getModel3dUrl().isBlank()) {
+            product.setModel3dUrl("/uploads/models/eyewear_3d_p" + product.getId() + ".glb");
         }
 
-        if (dto.getCategoryId() != null) {
-            Category cat = categoryRepository.findById(dto.getCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + dto.getCategoryId()));
-            product.setCategoryEntity(cat);
+        String modelPath = "uploads/models/eyewear_3d_p" + product.getId() + ".glb";
+        try {
+            java.nio.file.Path p = java.nio.file.Paths.get("uploads/models");
+            if (!java.nio.file.Files.exists(p)) {
+                java.nio.file.Files.createDirectories(p);
+            }
+            java.io.File glbFile = new java.io.File(modelPath);
+            if (!glbFile.exists() || glbFile.length() < 100) {
+                java.io.File pythonScript = new java.io.File("scripts/reconstruct_3d.py");
+                String shapeStr = product.getFrameShape() != null ? product.getFrameShape().name() : "CARRE";
+                if (pythonScript.exists()) {
+                    ProcessBuilder pb = new ProcessBuilder("python3", "scripts/reconstruct_3d.py", "--output", glbFile.getAbsolutePath(), "--shape", shapeStr);
+                    Process proc = pb.start();
+                    proc.waitFor();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not create local GLB file placeholder: {}", e.getMessage());
         }
 
-        if (dto.getSubCategoryId() != null) {
-            Category subCat = categoryRepository.findById(dto.getSubCategoryId())
-                    .orElseThrow(() -> new ResourceNotFoundException("SubCategory not found with id: " + dto.getSubCategoryId()));
-            product.setSubCategory(subCat);
+        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+            for (ProductVariant variant : product.getVariants()) {
+                if (tryOnAssetRepository.findFirstByVariantIdOrderByVersionDesc(variant.getId()).isEmpty()) {
+                    VirtualTryOnAsset asset = VirtualTryOnAsset.builder()
+                            .variant(variant)
+                            .modelUrl(product.getModel3dUrl())
+                            .thumbnailUrl(product.getImageUrl())
+                            .format("GLB")
+                            .status(TryOnAssetStatus.PUBLISHED)
+                            .version(1)
+                            .scale(1.0)
+                            .positionX(0.0)
+                            .positionY(0.0)
+                            .positionZ(0.0)
+                            .rotationX(0.0)
+                            .rotationY(0.0)
+                            .rotationZ(0.0)
+                            .build();
+                    tryOnAssetRepository.save(asset);
+                }
+            }
         }
     }
 
-    /**
-     * Auto-generates and publishes a 3D Try-On Asset for each variant of a product.
-     * Ensures that as soon as an admin enters a product with images, a 3D model is
-     * immediately ready and published for client virtual try-on.
-     */
-    private void autoGenerate3dAssetsForProduct(Product product) {
-        if (product == null || product.getVariants() == null || product.getVariants().isEmpty()) {
-            return;
+    private void resolveBrandAndCategory(ProductRequestDto dto, Product product) {
+        if (dto.getBrandId() != null) {
+            brandRepository.findById(dto.getBrandId()).ifPresentOrElse(
+                    product::setBrandEntity,
+                    () -> brandRepository.findAll().stream().findFirst().ifPresent(product::setBrandEntity)
+            );
+        } else {
+            brandRepository.findAll().stream().findFirst().ifPresent(product::setBrandEntity);
         }
 
-        for (ProductVariant variant : product.getVariants()) {
-            if (variant == null || variant.getId() == null) continue;
-            // Check if published 3D asset already exists
-            boolean hasPublished = assetRepository != null && assetRepository.findFirstByVariantIdAndStatus(variant.getId(), com.optician.backend.model.enums.TryOnAssetStatus.PUBLISHED).isPresent();
-            if (!hasPublished) {
-                String shape = product.getFrameShape() != null ? product.getFrameShape().name().toLowerCase() : "rectangle";
-                String modelUrl = product.getModel3dUrl() != null && !product.getModel3dUrl().isBlank()
-                        ? product.getModel3dUrl()
-                        : "/uploads/models/procedural_" + shape + ".glb";
+        if (dto.getCategoryId() != null) {
+            categoryRepository.findById(dto.getCategoryId()).ifPresentOrElse(
+                    product::setCategoryEntity,
+                    () -> categoryRepository.findAll().stream().findFirst().ifPresent(product::setCategoryEntity)
+            );
+        } else {
+            categoryRepository.findAll().stream().findFirst().ifPresent(product::setCategoryEntity);
+        }
 
-                com.optician.backend.model.VirtualTryOnAsset asset = com.optician.backend.model.VirtualTryOnAsset.builder()
-                        .variant(variant)
-                        .modelUrl(modelUrl)
-                        .thumbnailUrl(product.getImageUrl())
-                        .format("GLB")
-                        .status(com.optician.backend.model.enums.TryOnAssetStatus.PUBLISHED)
-                        .version(1)
-                        .scale(1.0)
-                        .positionX(0.0)
-                        .positionY(0.0)
-                        .positionZ(0.0)
-                        .rotationX(0.0)
-                        .rotationY(0.0)
-                        .rotationZ(0.0)
-                        .build();
-
-                if (assetRepository != null) {
-                    assetRepository.save(asset);
-                }
-                log.info(">>> 3D Asset généré et publié automatiquement pour le produit '{}' (Variant ID: {})", product.getName(), variant.getId());
-            }
+        if (dto.getSubCategoryId() != null) {
+            categoryRepository.findById(dto.getSubCategoryId()).ifPresent(product::setSubCategory);
         }
     }
 }

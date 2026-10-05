@@ -14,6 +14,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByReference(String reference);
 
+    java.util.Optional<Product> findByReference(String reference);
+
     long countByBrandEntityId(Long brandId);
 
     long countByCategoryEntityId(Long categoryId);

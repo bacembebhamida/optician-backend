@@ -3,6 +3,10 @@ target/
 
 # Log files
 *.log
+spring-boot.log
+
+# Uploads and generated models
+uploads/
 
 # Sensitive / Temporary files
 cookies.txt
@@ -19,3 +23,4 @@ Thumbs.db
 .classpath
 .project
 .settings/
+

@@ -32,6 +32,7 @@ public class DataInitializer implements CommandLineRunner {
     private final NotificationRepository notificationRepository;
     private final UserAccountRepository userAccountRepository;
     private final StockRepository stockRepository;
+    private final VirtualTryOnAssetRepository tryOnAssetRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.bootstrap.admin.email:}")
@@ -132,116 +133,78 @@ public class DataInitializer implements CommandLineRunner {
 
         promotionRepository.saveAll(List.of(promo1, promo2));
 
-        // 5. Seed Products (MODÈLES COMMERCIAUX) — sans aucune donnée de déclinaison
-        Product p1 = Product.builder()
-                .reference("RB-3025-001")
-                .name("Ray-Ban Aviator Classic")
-                .brandEntity(rayban)
-                .legacyBrand("Ray-Ban")
-                .categoryEntity(catSoleil)
-                .legacyCategory("LUNETTES_SOLEIL")
-                .productType(ProductType.SUNGLASSES)
-                .gender(Gender.MIXTE)
-                .targetAge(TargetAge.ADULT)
-                .frameShape(FrameShape.AVIATEUR)
-                .material("METAL")
-                .imageUrl("https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80")
-                .virtualTryOnEnabled(true)
-                .description("Monture iconique en goutte d'eau créée à l'origine pour les pilotes américains en 1937.")
-                .build();
+        // 5. Seed Products (30 MODÈLES OFFICIELS - 5 PAR MARQUE)
+        // --- RAY-BAN (5 Modèles) ---
+        Product p1 = Product.builder().reference("RB-3025-001").name("Ray-Ban Aviator Classic").brandEntity(rayban).legacyBrand("Ray-Ban").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.MIXTE).targetAge(TargetAge.ADULT).frameShape(FrameShape.AVIATEUR).material("METAL").imageUrl("https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p1.glb").description("Monture iconique en goutte d'eau créée à l'origine pour les pilotes américains en 1937.").build();
+        Product p_rb2 = Product.builder().reference("RB-2140-001").name("Ray-Ban Wayfarer Classic").brandEntity(rayban).legacyBrand("Ray-Ban").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.MIXTE).targetAge(TargetAge.ADULT).frameShape(FrameShape.CARRE).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p1.glb").description("Le modèle le plus reconnaissable de l'histoire des lunettes de soleil.").build();
+        Product p_rb3 = Product.builder().reference("RB-3016-001").name("Ray-Ban Clubmaster Classic").brandEntity(rayban).legacyBrand("Ray-Ban").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.MIXTE).targetAge(TargetAge.ADULT).frameShape(FrameShape.PANTOS).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p1.glb").description("Inspirées des années 50, portées par les intellectuels et les pionniers du style.").build();
+        Product p_rb4 = Product.builder().reference("RB-4165-001").name("Ray-Ban Justin Color Mix").brandEntity(rayban).legacyBrand("Ray-Ban").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.RECTANGULAIRE).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p1.glb").description("Finition caoutchoutée audacieuse et verres dégradés modernes.").build();
+        Product p_rb5 = Product.builder().reference("RX-3447V-001").name("Ray-Ban Round Metal Optique").brandEntity(rayban).legacyBrand("Ray-Ban").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.MIXTE).targetAge(TargetAge.ADULT).frameShape(FrameShape.ROND).material("METAL").imageUrl("https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p1.glb").description("Monture rétro et épurée en métal fin avec branches gravées.").build();
 
-        Product p2 = Product.builder()
-                .reference("OO-9102-01")
-                .name("Oakley Holbrook Stealth")
-                .brandEntity(oakley)
-                .legacyBrand("Oakley")
-                .categoryEntity(catSoleil)
-                .legacyCategory("LUNETTES_SOLEIL")
-                .productType(ProductType.SUNGLASSES)
-                .gender(Gender.HOMME)
-                .targetAge(TargetAge.ADULT)
-                .frameShape(FrameShape.CARRE)
-                .material("ACETATE")
-                .imageUrl("https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80")
-                .virtualTryOnEnabled(true)
-                .description("Style intemporel et moderne combiné à la technologie de verre de haute performance Prizm.")
-                .build();
+        // --- OAKLEY (5 Modèles) ---
+        Product p2 = Product.builder().reference("OO-9102-01").name("Oakley Holbrook Stealth").brandEntity(oakley).legacyBrand("Oakley").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.CARRE).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p2.glb").description("Style intemporel et moderne combiné à la technologie de verre Prizm.").build();
+        Product p_ok2 = Product.builder().reference("OO-9013-01").name("Oakley Frogskins Classic").brandEntity(oakley).legacyBrand("Oakley").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.MIXTE).targetAge(TargetAge.ADULT).frameShape(FrameShape.CARRE).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p2.glb").description("Le pop art des années 80 réinventé avec la précision optique Oakley.").build();
+        Product p_ok3 = Product.builder().reference("OO-9014-01").name("Oakley Gascan Tactical").brandEntity(oakley).legacyBrand("Oakley").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.RECTANGULAIRE).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p2.glb").description("Lignes épurées et angulaires gravées dans le matériau résistant O Matter.").build();
+        Product p_ok4 = Product.builder().reference("OO-9208-01").name("Oakley Radar EV Path Sport").brandEntity(oakley).legacyBrand("Oakley").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.AUTRE).material("PLASTIQUE").imageUrl("https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p2.glb").description("Champ de vision étendu vers le haut pour une performance sportive ultime.").build();
+        Product p_ok5 = Product.builder().reference("OX-8105-01").name("Oakley Pitchman R Optique").brandEntity(oakley).legacyBrand("Oakley").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.ROND).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p2.glb").description("Charnières sans vis Hollowpoint et branches fines en acier inoxydable.").build();
 
-        Product p3 = Product.builder()
-                .reference("GG-0123-002")
-                .name("Gucci Elegance Titanium")
-                .brandEntity(gucci)
-                .legacyBrand("Gucci")
-                .categoryEntity(catVue)
-                .legacyCategory("LUNETTES_VUE")
-                .productType(ProductType.OPTICAL_FRAME)
-                .gender(Gender.FEMME)
-                .targetAge(TargetAge.ADULT)
-                .frameShape(FrameShape.OVALE)
-                .material("TITANE")
-                .imageUrl("https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80")
-                .virtualTryOnEnabled(true)
-                .description("Monture optique d'exception ultra-légère en titane avec gravures artisanales sur les branches.")
-                .build();
+        // --- GUCCI (5 Modèles) ---
+        Product p3 = Product.builder().reference("GG-0123-002").name("Gucci Elegance Titanium").brandEntity(gucci).legacyBrand("Gucci").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.FEMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.OVALE).material("TITANE").imageUrl("https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p3.glb").description("Monture optique ultra-légère en titane avec gravures artisanales.").build();
+        Product p_gc2 = Product.builder().reference("GG-0608OK-001").name("Gucci Square Acetate Optique").brandEntity(gucci).legacyBrand("Gucci").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.CARRE).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p3.glb").description("Design carré sophistiqué rehaussé de la bande Web emblématique.").build();
+        Product p_gc3 = Product.builder().reference("GG-0208S-001").name("Gucci Cat Eye Vintage").brandEntity(gucci).legacyBrand("Gucci").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.FEMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.PAPILLON).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p3.glb").description("Silhouette œil-de-chat rétro avec logo GG entrelacé doré.").build();
+        Product p_gc4 = Product.builder().reference("GG-0528S-001").name("Gucci Oversized Pilot").brandEntity(gucci).legacyBrand("Gucci").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.MIXTE).targetAge(TargetAge.ADULT).frameShape(FrameShape.AVIATEUR).material("METAL").imageUrl("https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p3.glb").description("Lunettes pilote oversize avec double pont et finitions dorées.").build();
+        Product p_gc5 = Product.builder().reference("GG-0396O-001").name("Gucci Rimless Executive Optique").brandEntity(gucci).legacyBrand("Gucci").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.RECTANGULAIRE).material("TITANE").imageUrl("https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p3.glb").description("Monture percée haut de gamme pour un look discret et luxueux.").build();
 
-        Product p4 = Product.builder()
-                .reference("TF-5542-001")
-                .name("Tom Ford Wayfarer Modern")
-                .brandEntity(tomford)
-                .legacyBrand("Tom Ford")
-                .categoryEntity(catVue)
-                .legacyCategory("LUNETTES_VUE")
-                .productType(ProductType.OPTICAL_FRAME)
-                .gender(Gender.MIXTE)
-                .targetAge(TargetAge.ADULT)
-                .frameShape(FrameShape.RECTANGULAIRE)
-                .material("ACETATE")
-                .imageUrl("https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80")
-                .virtualTryOnEnabled(true)
-                .description("Silhouette classique retravaillée avec la charnière signature 'T' en métal brillant.")
-                .build();
+        // --- TOM FORD (5 Modèles) ---
+        Product p4 = Product.builder().reference("TF-5542-001").name("Tom Ford Wayfarer Modern").brandEntity(tomford).legacyBrand("Tom Ford").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.MIXTE).targetAge(TargetAge.ADULT).frameShape(FrameShape.RECTANGULAIRE).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p4.glb").description("Silhouette classique avec la charnière signature 'T' en métal.").build();
+        Product p_tf2 = Product.builder().reference("TF-0237-01A").name("Tom Ford Snowdon Sunglasses").brandEntity(tomford).legacyBrand("Tom Ford").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.CARRE).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p4.glb").description("Modèle mythique porté dans le film James Bond Spectre.").build();
+        Product p_tf3 = Product.builder().reference("FT-5555B-001").name("Tom Ford Blue Block Optique").brandEntity(tomford).legacyBrand("Tom Ford").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.MIXTE).targetAge(TargetAge.ADULT).frameShape(FrameShape.PANTOS).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p4.glb").description("Monture équipée de verres anti-lumière bleue prêts à porter.").build();
+        Product p_tf4 = Product.builder().reference("TF-0248-05N").name("Tom Ford Henry Clubmaster").brandEntity(tomford).legacyBrand("Tom Ford").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.PANTOS).material("METAL").imageUrl("https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p4.glb").description("Style vintage Browline revisité avec des détails métal dorés.").build();
+        Product p_tf5 = Product.builder().reference("TF-0371-01B").name("Tom Ford Anoushka Cat Eye").brandEntity(tomford).legacyBrand("Tom Ford").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.FEMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.PAPILLON).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p4.glb").description("Forme papillon exagérée pour un style glamorous et affirmé.").build();
 
-        Product p5 = Product.builder()
-                .reference("PO-0649-24")
-                .name("Persol Cellor Original")
-                .brandEntity(persol)
-                .legacyBrand("Persol")
-                .categoryEntity(catVue)
-                .legacyCategory("LUNETTES_VUE")
-                .productType(ProductType.OPTICAL_FRAME)
-                .gender(Gender.HOMME)
-                .targetAge(TargetAge.ADULT)
-                .frameShape(FrameShape.PANTOS)
-                .material("ACETATE")
-                .imageUrl("https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80")
-                .virtualTryOnEnabled(true)
-                .description("Fabrication italienne à la main, système flexible Meflecto pour un confort inégalé.")
-                .build();
+        // --- PERSOL (5 Modèles) ---
+        Product p5 = Product.builder().reference("PO-0649-24").name("Persol Cellor Original").brandEntity(persol).legacyBrand("Persol").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.PANTOS).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1508296695146-257a814070b4?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p5.glb").description("Artisanat italien, système flexible Meflecto pour un confort inégalé.").build();
+        Product p_ps2 = Product.builder().reference("PO-0714-SM").name("Persol 714 Steve McQueen Folding").brandEntity(persol).legacyBrand("Persol").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.AVIATEUR).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p5.glb").description("Les premières lunettes pliables de l'histoire, devenues légendaires.").build();
+        Product p_ps3 = Product.builder().reference("PO-3105V-24").name("Persol 3105V Optique").brandEntity(persol).legacyBrand("Persol").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.MIXTE).targetAge(TargetAge.ADULT).frameShape(FrameShape.PANTOS).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p5.glb").description("Monture pantos emblématique avec la flèche Supreme argentée.").build();
+        Product p_ps4 = Product.builder().reference("PO-3166V-95").name("Persol Calligrapher Edition").brandEntity(persol).legacyBrand("Persol").categoryEntity(catVue).legacyCategory("LUNETTES_VUE").productType(ProductType.OPTICAL_FRAME).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.ROND).material("METAL").imageUrl("https://images.unsplash.com/photo-1577803645773-f96470509666?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p5.glb").description("Édition spéciale combinant acétate gravé et pont en métal travaillé.").build();
+        Product p_ps5 = Product.builder().reference("PO-3225S-24").name("Persol Key West Sunglasses").brandEntity(persol).legacyBrand("Persol").categoryEntity(catSoleil).legacyCategory("LUNETTES_SOLEIL").productType(ProductType.SUNGLASSES).gender(Gender.HOMME).targetAge(TargetAge.ADULT).frameShape(FrameShape.RECTANGULAIRE).material("ACETATE").imageUrl("https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(true).tryOn3dAvailable(true).model3dUrl("/uploads/models/eyewear_3d_p5.glb").description("Esprit vintage des années 90 avec profil rectangulaire galbé.").build();
 
-        Product p6 = Product.builder()
-                .reference("BL-BIOTRUE-30")
-                .name("BioTrue Monthly Precision")
-                .brandEntity(bausch)
-                .legacyBrand("Bausch & Lomb")
-                .categoryEntity(catLentilles)
-                .legacyCategory("LENTILLES")
-                .productType(ProductType.CONTACT_LENSES)
-                .gender(Gender.MIXTE)
-                .targetAge(TargetAge.ALL)
-                .frameShape(FrameShape.AUTRE)
-                .imageUrl("https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80")
-                .virtualTryOnEnabled(false)
-                .description("Lentilles de contact mensuelles à très haute hydratation inspirée de la biologie de l'œil.")
-                .build();
+        // --- BAUSCH & LOMB (5 Modèles) ---
+        Product p6 = Product.builder().reference("BL-BIOTRUE-30").name("BioTrue Monthly Precision").brandEntity(bausch).legacyBrand("Bausch & Lomb").categoryEntity(catLentilles).legacyCategory("LENTILLES").productType(ProductType.CONTACT_LENSES).gender(Gender.MIXTE).targetAge(TargetAge.ALL).frameShape(FrameShape.AUTRE).imageUrl("https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(false).description("Lentilles de contact mensuelles à très haute hydratation.").build();
+        Product p_bl2 = Product.builder().reference("BL-PUREVIS-AST").name("PureVision 2 HD Astigmatism").brandEntity(bausch).legacyBrand("Bausch & Lomb").categoryEntity(catLentilles).legacyCategory("LENTILLES").productType(ProductType.CONTACT_LENSES).gender(Gender.MIXTE).targetAge(TargetAge.ALL).frameShape(FrameShape.AUTRE).imageUrl("https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(false).description("Lentilles toriques pour la correction de l'astigmatisme avec optique HD.").build();
+        Product p_bl3 = Product.builder().reference("BL-SOFLENS-90").name("SofLens Daily Disposable").brandEntity(bausch).legacyBrand("Bausch & Lomb").categoryEntity(catLentilles).legacyCategory("LENTILLES").productType(ProductType.CONTACT_LENSES).gender(Gender.MIXTE).targetAge(TargetAge.ALL).frameShape(FrameShape.AUTRE).imageUrl("https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(false).description("Boîte de 90 lentilles journalières jetables ultra confortables.").build();
+        Product p_bl4 = Product.builder().reference("BL-ULTRA-MULTI").name("Ultra MoistureSeal Multifocal").brandEntity(bausch).legacyBrand("Bausch & Lomb").categoryEntity(catLentilles).legacyCategory("LENTILLES").productType(ProductType.CONTACT_LENSES).gender(Gender.MIXTE).targetAge(TargetAge.ALL).frameShape(FrameShape.AUTRE).imageUrl("https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(false).description("Lentilles progressives mensuelles avec technologie d'hydratation 16 heures.").build();
+        Product p_bl5 = Product.builder().reference("BL-CARE-250").name("Bausch & Lomb RGP Care Kit").brandEntity(bausch).legacyBrand("Bausch & Lomb").categoryEntity(catLentilles).legacyCategory("LENTILLES").productType(ProductType.CARE_PRODUCTS).gender(Gender.MIXTE).targetAge(TargetAge.ALL).frameShape(FrameShape.AUTRE).imageUrl("https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80").virtualTryOnEnabled(false).description("Solution tout-en-un de décontamination et rinçage 250ml.").build();
 
-        productRepository.saveAll(List.of(p1, p2, p3, p4, p5, p6));
+        productRepository.saveAll(List.of(
+            p1, p_rb2, p_rb3, p_rb4, p_rb5,
+            p2, p_ok2, p_ok3, p_ok4, p_ok5,
+            p3, p_gc2, p_gc3, p_gc4, p_gc5,
+            p4, p_tf2, p_tf3, p_tf4, p_tf5,
+            p5, p_ps2, p_ps3, p_ps4, p_ps5,
+            p6, p_bl2, p_bl3, p_bl4, p_bl5
+        ));
 
-        // Variantes vendables (SKU, barcode, couleur, prix) — données de déclinaison
-        ProductVariant v1 = ProductVariant.builder().product(p1).sku("RB-3025-001-GOLD").barcode("805289005398").color("Or / Vert").size("58-14-135").purchasePrice(new BigDecimal("90.00")).sellingPrice(new BigDecimal("165.00")).active(true).build();
+        // Variantes vendables (SKU, barcode, couleur, prix) — déclinaisons pour tests
+        ProductVariant v1 = ProductVariant.builder().product(p1).sku("RB-3025-001-GOLD").barcode("805289005398").color("Or / Vert G15").size("58-14-135").purchasePrice(new BigDecimal("90.00")).sellingPrice(new BigDecimal("165.00")).active(true).build();
         ProductVariant v2 = ProductVariant.builder().product(p1).sku("RB-3025-002-BLACK").barcode("805289005399").color("Noir Mat / G15").size("58-14-135").purchasePrice(new BigDecimal("90.00")).sellingPrice(new BigDecimal("165.00")).active(true).build();
-        ProductVariant v3 = ProductVariant.builder().product(p1).sku("RB-3025-003-GREEN").barcode("805289005400").color("Vert / Marron G15").size("58-14-135").purchasePrice(new BigDecimal("90.00")).sellingPrice(new BigDecimal("175.00")).active(true).build();
+        ProductVariant v3 = ProductVariant.builder().product(p1).sku("RB-3025-003-GREEN").barcode("805289005400").color("Argent / Miroir").size("58-14-135").purchasePrice(new BigDecimal("95.00")).sellingPrice(new BigDecimal("175.00")).active(true).build();
         ProductVariant v4 = ProductVariant.builder().product(p2).sku("OO-9102-01-BLK").barcode("888392001122").color("Noir Mat / Prizm Black").size("55-18-137").purchasePrice(new BigDecimal("75.00")).sellingPrice(new BigDecimal("142.00")).active(true).build();
-        variantRepository.saveAll(List.of(v1, v2, v3, v4));
+        ProductVariant v5 = ProductVariant.builder().product(p3).sku("GG-0123-002-GLD").barcode("805637600123").color("Doré / Vert").size("52-16-140").purchasePrice(new BigDecimal("180.00")).sellingPrice(new BigDecimal("340.00")).active(true).build();
+        ProductVariant v6 = ProductVariant.builder().product(p4).sku("TF-5542-001-BLK").barcode("664689005542").color("Shiny Black T").size("53-17-145").purchasePrice(new BigDecimal("190.00")).sellingPrice(new BigDecimal("360.00")).active(true).build();
+        ProductVariant v7 = ProductVariant.builder().product(p5).sku("PO-0649-24-HAV").barcode("805289000649").color("Havana / Green").size("54-20-140").purchasePrice(new BigDecimal("140.00")).sellingPrice(new BigDecimal("280.00")).active(true).build();
+        
+        variantRepository.saveAll(List.of(v1, v2, v3, v4, v5, v6, v7));
+
+        // 3D Virtual Try-On Assets (100% Gratuit, Local, Statut PUBLISHED)
+        VirtualTryOnAsset a1 = VirtualTryOnAsset.builder().variant(v1).modelUrl("/uploads/models/eyewear_3d_p1.glb").thumbnailUrl(p1.getImageUrl()).format("GLB").status(TryOnAssetStatus.PUBLISHED).version(1).scale(1.0).positionX(0.0).positionY(0.0).positionZ(0.0).rotationX(0.0).rotationY(0.0).rotationZ(0.0).build();
+        VirtualTryOnAsset a2 = VirtualTryOnAsset.builder().variant(v2).modelUrl("/uploads/models/eyewear_3d_p1.glb").thumbnailUrl(p1.getImageUrl()).format("GLB").status(TryOnAssetStatus.PUBLISHED).version(1).scale(1.0).positionX(0.0).positionY(0.0).positionZ(0.0).rotationX(0.0).rotationY(0.0).rotationZ(0.0).build();
+        VirtualTryOnAsset a3 = VirtualTryOnAsset.builder().variant(v3).modelUrl("/uploads/models/eyewear_3d_p1.glb").thumbnailUrl(p1.getImageUrl()).format("GLB").status(TryOnAssetStatus.PUBLISHED).version(1).scale(1.0).positionX(0.0).positionY(0.0).positionZ(0.0).rotationX(0.0).rotationY(0.0).rotationZ(0.0).build();
+        VirtualTryOnAsset a4 = VirtualTryOnAsset.builder().variant(v4).modelUrl("/uploads/models/eyewear_3d_p2.glb").thumbnailUrl(p2.getImageUrl()).format("GLB").status(TryOnAssetStatus.PUBLISHED).version(1).scale(1.0).positionX(0.0).positionY(0.0).positionZ(0.0).rotationX(0.0).rotationY(0.0).rotationZ(0.0).build();
+        VirtualTryOnAsset a5 = VirtualTryOnAsset.builder().variant(v5).modelUrl("/uploads/models/eyewear_3d_p3.glb").thumbnailUrl(p3.getImageUrl()).format("GLB").status(TryOnAssetStatus.PUBLISHED).version(1).scale(1.0).positionX(0.0).positionY(0.0).positionZ(0.0).rotationX(0.0).rotationY(0.0).rotationZ(0.0).build();
+        VirtualTryOnAsset a6 = VirtualTryOnAsset.builder().variant(v6).modelUrl("/uploads/models/eyewear_3d_p4.glb").thumbnailUrl(p4.getImageUrl()).format("GLB").status(TryOnAssetStatus.PUBLISHED).version(1).scale(1.0).positionX(0.0).positionY(0.0).positionZ(0.0).rotationX(0.0).rotationY(0.0).rotationZ(0.0).build();
+        VirtualTryOnAsset a7 = VirtualTryOnAsset.builder().variant(v7).modelUrl("/uploads/models/eyewear_3d_p5.glb").thumbnailUrl(p5.getImageUrl()).format("GLB").status(TryOnAssetStatus.PUBLISHED).version(1).scale(1.0).positionX(0.0).positionY(0.0).positionZ(0.0).rotationX(0.0).rotationY(0.0).rotationZ(0.0).build();
+        tryOnAssetRepository.saveAll(List.of(a1, a2, a3, a4, a5, a6, a7));
 
         // Stocks réels par variante et par magasin (table stocks = source de vérité)
         stockRepository.saveAll(List.of(
@@ -250,13 +213,11 @@ public class DataInitializer implements CommandLineRunner {
                 Stock.builder().productVariant(v1).store(s3).quantity(2).reservedQuantity(0).minimumStock(2).maximumStock(30).reorderPoint(4).build(),
                 Stock.builder().productVariant(v2).store(s1).quantity(5).reservedQuantity(0).minimumStock(4).maximumStock(40).reorderPoint(6).build(),
                 Stock.builder().productVariant(v2).store(s2).quantity(1).reservedQuantity(0).minimumStock(2).maximumStock(20).reorderPoint(3).build(),
-                Stock.builder().productVariant(v2).store(s3).quantity(0).reservedQuantity(0).minimumStock(2).maximumStock(20).reorderPoint(3).build(),
                 Stock.builder().productVariant(v3).store(s1).quantity(8).reservedQuantity(1).minimumStock(5).maximumStock(50).reorderPoint(7).build(),
-                Stock.builder().productVariant(v3).store(s2).quantity(3).reservedQuantity(0).minimumStock(3).maximumStock(30).reorderPoint(4).build(),
-                Stock.builder().productVariant(v3).store(s3).quantity(5).reservedQuantity(0).minimumStock(3).maximumStock(30).reorderPoint(4).build(),
                 Stock.builder().productVariant(v4).store(s1).quantity(9).reservedQuantity(1).minimumStock(4).maximumStock(50).reorderPoint(6).build(),
-                Stock.builder().productVariant(v4).store(s2).quantity(2).reservedQuantity(0).minimumStock(3).maximumStock(30).reorderPoint(4).build(),
-                Stock.builder().productVariant(v4).store(s3).quantity(1).reservedQuantity(0).minimumStock(2).maximumStock(20).reorderPoint(3).build()
+                Stock.builder().productVariant(v5).store(s1).quantity(6).reservedQuantity(0).minimumStock(2).maximumStock(30).reorderPoint(4).build(),
+                Stock.builder().productVariant(v6).store(s1).quantity(7).reservedQuantity(0).minimumStock(3).maximumStock(30).reorderPoint(5).build(),
+                Stock.builder().productVariant(v7).store(s1).quantity(5).reservedQuantity(0).minimumStock(2).maximumStock(25).reorderPoint(4).build()
         ));
 
         // 6. Seed Patients
