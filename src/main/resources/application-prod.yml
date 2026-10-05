@@ -1,0 +1,33 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:opticiandb}
+    username: ${DB_USER:optician}
+    password: ${DB_PASS:optician_secret_2026}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8081/realms/OpticianApp}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8081/realms/OpticianApp/protocol/openid-connect/certs}
+
+logging:
+  level:
+    com.optician: INFO
+    org.hibernate.SQL: WARN

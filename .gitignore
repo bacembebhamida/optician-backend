@@ -1,0 +1,21 @@
+target/
+*.class
+
+# Log files
+*.log
+
+# Sensitive / Temporary files
+cookies.txt
+cookie.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/

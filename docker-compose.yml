@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  optician-db:
+    image: postgres:16-alpine
+    container_name: optician-postgres-db
+    environment:
+      POSTGRES_DB: opticiandb
+      POSTGRES_USER: optician
+      POSTGRES_PASSWORD: optician_secret_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U optician -d opticiandb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Keycloak IAM Service (OAuth2 / OpenID Connect RBAC)
+  optician-keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: optician-keycloak-iam
+    command: start-dev --http-port 8081
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8081:8081"
+    depends_on:
+      - optician-db
+
+volumes:
+  postgres_data:
