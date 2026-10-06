@@ -40,6 +40,10 @@ public class ProductImage {
     @Builder.Default
     private Boolean primaryImage = false;
 
+    @Builder.Default
+    @Column(length = 30)
+    private String imageType = "FRONT"; // FRONT, THREE_QUARTER, SIDE, BACK, TOP, BOTTOM, OTHER
+
     private LocalDateTime createdAt;
 
     @PrePersist

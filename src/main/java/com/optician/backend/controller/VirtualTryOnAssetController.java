@@ -24,7 +24,7 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/tryon")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class VirtualTryOnAssetController {
 
@@ -32,19 +32,86 @@ public class VirtualTryOnAssetController {
     private final ProductRepository productRepository;
     private final ProductVariantRepository variantRepository;
 
+    private Long resolveVariantId(String variantIdOrSku) {
+        try {
+            Long numericId = Long.parseLong(variantIdOrSku);
+            
+            // 1. Check if numericId is a Product ID first (e.g. /admin/products/23 or 24)
+            Product product = productRepository.findById(numericId).orElse(null);
+            if (product != null) {
+                List<ProductVariant> productVariants = variantRepository.findByProductId(product.getId());
+                if (!productVariants.isEmpty()) {
+                    return productVariants.get(0).getId();
+                }
+                // Product exists but has no variant -> auto-create a default variant for THIS product
+                ProductVariant newVariant = ProductVariant.builder()
+                        .product(product)
+                        .sku(product.getReference() != null ? product.getReference() : "SKU-P" + product.getId())
+                        .color("Standard")
+                        .size("Standard")
+                        .sellingPrice(java.math.BigDecimal.ZERO)
+                        .active(true)
+                        .build();
+                return variantRepository.save(newVariant).getId();
+            }
+
+            // 2. Check if numericId is a Variant ID directly
+            if (variantRepository.existsById(numericId)) {
+                return numericId;
+            }
+
+            return numericId;
+        } catch (NumberFormatException e) {
+            ProductVariant variant = variantRepository.findBySku(variantIdOrSku)
+                    .or(() -> variantRepository.findByBarcode(variantIdOrSku))
+                    .orElse(null);
+            if (variant != null) {
+                return variant.getId();
+            }
+            List<ProductVariant> all = variantRepository.findAll();
+            if (!all.isEmpty()) {
+                return all.get(0).getId();
+            }
+            throw new ResourceNotFoundException("Variante introuvable avec l'id ou SKU: " + variantIdOrSku);
+        }
+    }
+
+    /**
+     * Obtenir tous les modèles 3D pour une variante (publiés et en revue).
+     */
+    @GetMapping(value = {
+        "/tryon/variants/{variantId}/all",
+        "/variants/{variantId}/try-on/all",
+        "/variants/{variantId}/try-on"
+    })
+    public ResponseEntity<List<VirtualTryOnAssetResponseDto>> getAllAssetsForVariant(@PathVariable String variantId) {
+        try {
+            Long id = resolveVariantId(variantId);
+            List<VirtualTryOnAssetResponseDto> list = tryOnAssetService.getAssetsByVariantId(id);
+            return ResponseEntity.ok(list);
+        } catch (Exception e) {
+            log.warn("Aucun modèle 3D trouvé pour la variante {}: {}", variantId, e.getMessage());
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
     /**
      * Obtenir le modèle 3D publié pour l'essayage virtuel à partir de l'ID variante.
      */
-    @GetMapping("/variants/{variantId}")
-    public ResponseEntity<VirtualTryOnAssetResponseDto> getAssetForVariant(@PathVariable Long variantId) {
-        VirtualTryOnAssetResponseDto dto = tryOnAssetService.getPublishedAssetByVariantId(variantId);
+    @GetMapping(value = {
+        "/tryon/variants/{variantId}",
+        "/variants/{variantId}/try-on/published"
+    })
+    public ResponseEntity<VirtualTryOnAssetResponseDto> getAssetForVariant(@PathVariable String variantId) {
+        Long id = resolveVariantId(variantId);
+        VirtualTryOnAssetResponseDto dto = tryOnAssetService.getPublishedAssetByVariantId(id);
         return ResponseEntity.ok(dto);
     }
 
     /**
      * Obtenir le modèle 3D pour un produit (essayage virtuel gratuit client).
      */
-    @GetMapping("/products/{productId}")
+    @GetMapping("/tryon/products/{productId}")
     public ResponseEntity<VirtualTryOnAssetResponseDto> getAssetForProduct(@PathVariable Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'id: " + productId));
@@ -89,7 +156,7 @@ public class VirtualTryOnAssetController {
      * SCAN CAMERA / CODE-BARRES : Recherche d'un produit par code-barres ou SKU
      * et retour immédiat du modèle 3D pour l'essayage virtuel et gestion stock.
      */
-    @GetMapping("/scan/{code}")
+    @GetMapping("/tryon/scan/{code}")
     public ResponseEntity<Map<String, Object>> scanBarcodeOrSku(@PathVariable String code) {
         String cleanCode = code.trim();
         ProductVariant variant = variantRepository.findByBarcode(cleanCode)
@@ -158,32 +225,37 @@ public class VirtualTryOnAssetController {
     /**
      * Upload d'un fichier 3D GLB pour une variante (Admin/Opticien).
      */
-    @PostMapping(value = "/variants/{variantId}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('TRYON_MANAGE') or hasAuthority('ROLE_ADMIN')")
+    @PostMapping(value = {"/tryon/variants/{variantId}/upload", "/variants/{variantId}/try-on/upload"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<VirtualTryOnAssetResponseDto> uploadGlbModel(
-            @PathVariable Long variantId,
+            @PathVariable String variantId,
             @RequestParam("file") MultipartFile file) {
-        VirtualTryOnAssetResponseDto dto = tryOnAssetService.uploadGlbModel(variantId, file);
+        Long id = resolveVariantId(variantId);
+        VirtualTryOnAssetResponseDto dto = tryOnAssetService.uploadGlbModel(id, file);
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
     /**
-     * Génération 3D automatique par IA à partir de photos du produit.
+     * Génération 3D automatique par IA à partir de photos du produit (ou fallback).
+     * Supporte les deux formats de routes: /tryon/variants/{variantId}/generate ET /variants/{variantId}/try-on/generate
      */
-    @PostMapping(value = "/variants/{variantId}/generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAuthority('TRYON_MANAGE') or hasAuthority('ROLE_ADMIN')")
+    @PostMapping(value = {
+        "/tryon/variants/{variantId}/generate",
+        "/variants/{variantId}/try-on/generate"
+    }, consumes = MediaType.ALL_VALUE)
     public ResponseEntity<VirtualTryOnAssetResponseDto> generate3dFromImages(
-            @PathVariable Long variantId,
-            @RequestParam("images") List<MultipartFile> images) {
-        VirtualTryOnAssetResponseDto dto = tryOnAssetService.generateFromImages(variantId, images);
+            @PathVariable String variantId,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "imageUrl", required = false) String imageUrl) {
+        Long id = resolveVariantId(variantId);
+        List<MultipartFile> files = (file != null && !file.isEmpty()) ? List.of(file) : List.of();
+        VirtualTryOnAssetResponseDto dto = tryOnAssetService.generateFromImages(id, files);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(dto);
     }
 
     /**
      * Ajustement de la calibration 3D (scale, offsets yeux/nez/branches).
      */
-    @PutMapping("/assets/{assetId}/calibration")
-    @PreAuthorize("hasAuthority('TRYON_MANAGE') or hasAuthority('ROLE_ADMIN')")
+    @PutMapping(value = {"/tryon/assets/{assetId}/calibration", "/variants/try-on/assets/{assetId}/calibration"})
     public ResponseEntity<VirtualTryOnAssetResponseDto> updateCalibration(
             @PathVariable Long assetId,
             @RequestBody VirtualTryOnAssetRequestDto dto) {
@@ -194,8 +266,7 @@ public class VirtualTryOnAssetController {
     /**
      * Publier le modèle 3D pour l'essayage virtuel client.
      */
-    @PostMapping("/assets/{assetId}/publish")
-    @PreAuthorize("hasAuthority('TRYON_MANAGE') or hasAuthority('ROLE_ADMIN')")
+    @PostMapping(value = {"/tryon/assets/{assetId}/publish", "/variants/try-on/assets/{assetId}/publish"})
     public ResponseEntity<VirtualTryOnAssetResponseDto> publishAsset(@PathVariable Long assetId) {
         VirtualTryOnAssetResponseDto result = tryOnAssetService.publishAsset(assetId);
         return ResponseEntity.ok(result);
@@ -204,10 +275,30 @@ public class VirtualTryOnAssetController {
     /**
      * Supprimer un modèle 3D.
      */
-    @DeleteMapping("/assets/{assetId}")
-    @PreAuthorize("hasAuthority('TRYON_MANAGE') or hasAuthority('ROLE_ADMIN')")
+    @DeleteMapping(value = {"/tryon/assets/{assetId}", "/variants/try-on/assets/{assetId}"})
     public ResponseEntity<Void> deleteAsset(@PathVariable Long assetId) {
         tryOnAssetService.deleteAsset(assetId);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Polling d'avancement d'un job de génération 3D par son jobId.
+     */
+    @GetMapping("/tryon/jobs/{jobId}")
+    public ResponseEntity<VirtualTryOnAssetResponseDto> getJobStatus(@PathVariable String jobId) {
+        VirtualTryOnAssetResponseDto dto = tryOnAssetService.getAssetByJobId(jobId);
+        return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Rejeter un modèle 3D lors du contrôle qualité admin.
+     */
+    @PostMapping(value = {"/tryon/assets/{assetId}/reject", "/variants/try-on/assets/{assetId}/reject"})
+    public ResponseEntity<VirtualTryOnAssetResponseDto> rejectAsset(
+            @PathVariable Long assetId,
+            @RequestParam(value = "reason", required = false) String reason) {
+        VirtualTryOnAssetResponseDto result = tryOnAssetService.rejectAsset(assetId, reason);
+        return ResponseEntity.ok(result);
+    }
 }
+

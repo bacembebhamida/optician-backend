@@ -16,4 +16,6 @@ public interface VirtualTryOnAssetRepository extends JpaRepository<VirtualTryOnA
     Optional<VirtualTryOnAsset> findFirstByVariantIdAndStatus(Long variantId, TryOnAssetStatus status);
 
     Optional<VirtualTryOnAsset> findFirstByVariantIdOrderByVersionDesc(Long variantId);
+
+    Optional<VirtualTryOnAsset> findByJobId(String jobId);
 }

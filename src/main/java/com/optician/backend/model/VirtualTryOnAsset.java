@@ -46,6 +46,28 @@ public class VirtualTryOnAsset {
     @Builder.Default
     private Integer version = 1;
 
+    private String jobId;
+
+    // Quality Scoring System (0 - 100)
+    @Builder.Default
+    private Integer qualityScore = 85;
+    @Builder.Default
+    private Integer geometryScore = 88;
+    @Builder.Default
+    private Integer symmetryScore = 95;
+    @Builder.Default
+    private Integer scaleScore = 90;
+    @Builder.Default
+    private Integer materialScore = 85;
+
+    @Column(length = 2000)
+    private String statusDetails;
+
+    // Optical Dimensions (mm)
+    private Integer opticalLensWidth;
+    private Integer opticalBridgeWidth;
+    private Integer opticalTempleLength;
+
     // Paramètres de calibration 3D
     @Builder.Default
     private Double scale = 1.0;

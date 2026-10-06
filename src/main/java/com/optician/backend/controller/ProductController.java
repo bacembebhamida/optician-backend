@@ -39,41 +39,45 @@ public class ProductController {
 
     @GetMapping
     @Operation(summary = "Obtenir ou filtrer les produits avec pagination")
-    public ResponseEntity<?> getProducts(
+    public ResponseEntity<Page<ProductResponseDto>> getProducts(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) String faceShape,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDir) {
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false, defaultValue = "updatedAt") String sortBy,
+            @RequestParam(required = false) String sortDir,
+            @RequestParam(required = false) String sortDirection) {
 
-        // If simple filters are passed without pagination params, return List for direct compatibility
-        if (category != null || brand != null || faceShape != null) {
-            ProductSearchFilter filter = ProductSearchFilter.builder()
-                    .category(category)
-                    .brand(brand)
-                    .query(query)
-                    .minPrice(minPrice)
-                    .maxPrice(maxPrice)
-                    .build();
-            Pageable pageable = PageRequest.of(0, 100, Sort.by(Sort.Direction.fromString(sortDir), sortBy));
-            List<ProductResponseDto> list = productService.searchProducts(filter, pageable).getContent();
-            return ResponseEntity.ok(list);
-        }
+        int effectiveSize = (pageSize != null && pageSize > 0) ? pageSize : (size != null && size > 0 ? size : 10);
+        String effectiveSortDir = (sortDirection != null && !sortDirection.isBlank()) ? sortDirection : (sortDir != null && !sortDir.isBlank() ? sortDir : "DESC");
+        int rawPage = (page != null) ? page : 1;
+        int effectivePage = Math.max(0, rawPage > 0 ? rawPage - 1 : rawPage);
 
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
-        ProductSearchFilter filter = ProductSearchFilter.builder()
+        String effectiveSortBy = sanitizeSortBy(sortBy);
+
+        Sort.Direction direction = "ASC".equalsIgnoreCase(effectiveSortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(direction, effectiveSortBy);
+        Pageable pageable = PageRequest.of(effectivePage, effectiveSize, sort);
+
+        ProductSearchFilter.ProductSearchFilterBuilder filterBuilder = ProductSearchFilter.builder()
+                .category(category)
+                .brand(brand)
                 .query(query)
                 .minPrice(minPrice)
-                .maxPrice(maxPrice)
-                .build();
+                .maxPrice(maxPrice);
 
-        Page<ProductResponseDto> result = productService.searchProducts(filter, pageable);
+        if (faceShape != null && !faceShape.isBlank()) {
+            try {
+                filterBuilder.frameShape(com.optician.backend.model.enums.FrameShape.valueOf(faceShape.toUpperCase()));
+            } catch (Exception ignored) {}
+        }
+
+        Page<ProductResponseDto> result = productService.searchProducts(filterBuilder.build(), pageable);
         return ResponseEntity.ok(result);
     }
 
@@ -81,13 +85,24 @@ public class ProductController {
     @Operation(summary = "Recherche avancée multi-critères des produits")
     public ResponseEntity<Page<ProductResponseDto>> searchProducts(
             @ModelAttribute ProductSearchFilter filter,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "ASC") String sortDir) {
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false, defaultValue = "updatedAt") String sortBy,
+            @RequestParam(required = false) String sortDir,
+            @RequestParam(required = false) String sortDirection) {
 
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
+        int effectiveSize = (pageSize != null && pageSize > 0) ? pageSize : (size != null && size > 0 ? size : 10);
+        String effectiveSortDir = (sortDirection != null && !sortDirection.isBlank()) ? sortDirection : (sortDir != null && !sortDir.isBlank() ? sortDir : "DESC");
+        int rawPage = (page != null) ? page : 1;
+        int effectivePage = Math.max(0, rawPage > 0 ? rawPage - 1 : rawPage);
+
+        String effectiveSortBy = sanitizeSortBy(sortBy);
+
+        Sort.Direction direction = "ASC".equalsIgnoreCase(effectiveSortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(direction, effectiveSortBy);
+        Pageable pageable = PageRequest.of(effectivePage, effectiveSize, sort);
+
         return ResponseEntity.ok(productService.searchProducts(filter, pageable));
     }
 
@@ -145,5 +160,32 @@ public class ProductController {
     @Operation(summary = "Obtenir l'historique d'audit d'un produit")
     public ResponseEntity<List<ProductAuditLogDto>> getProductAuditLogs(@PathVariable Long id) {
         return ResponseEntity.ok(auditService.getAuditLogsForEntity("Product", id));
+    }
+
+    private String sanitizeSortBy(String sortBy) {
+        if (sortBy == null || sortBy.isBlank()) return "updatedAt";
+        switch (sortBy.trim()) {
+            case "sku":
+                return "reference";
+            case "brandName":
+            case "brand":
+                return "brandEntity.name";
+            case "category":
+            case "categoryName":
+                return "categoryEntity.name";
+            case "price":
+            case "priceTnd":
+                return "id";
+            case "name":
+            case "updatedAt":
+            case "createdAt":
+            case "id":
+            case "reference":
+            case "status":
+            case "productType":
+                return sortBy.trim();
+            default:
+                return "updatedAt";
+        }
     }
 }

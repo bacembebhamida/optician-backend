@@ -22,5 +22,9 @@ public interface VirtualTryOnAssetService {
 
     VirtualTryOnAssetResponseDto publishAsset(Long assetId);
 
+    VirtualTryOnAssetResponseDto rejectAsset(Long assetId, String reason);
+
+    VirtualTryOnAssetResponseDto getAssetByJobId(String jobId);
+
     void deleteAsset(Long assetId);
 }

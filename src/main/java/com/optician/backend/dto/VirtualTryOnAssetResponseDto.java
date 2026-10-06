@@ -23,6 +23,21 @@ public class VirtualTryOnAssetResponseDto {
     private TryOnAssetStatus status;
     private Integer version;
 
+    private String jobId;
+
+    // Quality Score System (0-100)
+    private Integer qualityScore;
+    private Integer geometryScore;
+    private Integer symmetryScore;
+    private Integer scaleScore;
+    private Integer materialScore;
+    private String statusDetails;
+
+    // Optical Dimensions (mm)
+    private Integer opticalLensWidth;
+    private Integer opticalBridgeWidth;
+    private Integer opticalTempleLength;
+
     // Calibration 3D
     private Double scale;
     private Double positionX;
