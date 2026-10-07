@@ -146,6 +146,17 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/bulk-delete")
+    @PreAuthorize(ProductPermissions.HAS_DELETE_PERMISSION)
+    @Operation(summary = "Supprimer plusieurs produits (Bulk Soft Delete)")
+    public ResponseEntity<Void> bulkDeleteProducts(@RequestBody Map<String, List<Long>> payload) {
+        List<Long> ids = payload.get("ids");
+        if (ids != null && !ids.isEmpty()) {
+            productService.bulkDeleteProducts(ids);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id}/activate")
     @PreAuthorize(ProductPermissions.HAS_UPDATE_PERMISSION)
     @Operation(summary = "Activer ou désactiver un produit")

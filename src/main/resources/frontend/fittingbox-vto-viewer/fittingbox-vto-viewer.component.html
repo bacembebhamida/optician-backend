@@ -1,0 +1,153 @@
+<div class="fbx-vto-wrapper">
+  <!-- En-tête / Barre d'outils Fittingbox avec sélecteur de mode -->
+  <div class="fbx-toolbar">
+    <div class="brand-badge">
+      <span class="brand-title">{{ brandName }}</span>
+      <span class="product-title">{{ productName }}</span>
+    </div>
+
+    <!-- Sélecteur de Mode : Studio 3D vs Essayage Virtuel Live -->
+    <div class="mode-toggle-group">
+      <button
+        class="toggle-btn"
+        [class.active]="activeMode === 'studio3d'"
+        (click)="setMode('studio3d')">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="9" stroke-width="2"/>
+          <path d="M3.6 9h16.8M3.6 15h16.8" stroke-width="1.5"/>
+        </svg>
+        Studio 3D 360°
+      </button>
+
+      <button
+        class="toggle-btn live-vto-btn"
+        [class.active]="activeMode === 'livevto'"
+        (click)="setMode('livevto')">
+        <span class="live-dot" *ngIf="isCameraActive"></span>
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke-width="2"/>
+          <circle cx="12" cy="13" r="4" stroke-width="2"/>
+        </svg>
+        Essayage Virtuel Caméra
+      </button>
+    </div>
+  </div>
+
+  <!-- Zone Principale d'Affichage (Canvas Studio vs Caméra Live) -->
+  <div class="fbx-display-stage">
+    
+    <!-- 1. MODE STUDIO 3D (360° PBR Model-Viewer) -->
+    <div class="stage-view studio-view" *ngIf="activeMode === 'studio3d'">
+      <!-- Badges dimensions physiques -->
+      <div class="metrics-overlay">
+        <span class="metric-pill">
+          📏 {{ dimensions.lensWidth }}◽{{ dimensions.bridgeWidth }}-{{ dimensions.templeLength }} mm
+        </span>
+        <span class="fit-pill" [class]="'fit-' + dimensions.fitCategory.toLowerCase()">
+          Taille {{ dimensions.fitCategory }} ({{ dimensions.totalWidth }} mm)
+        </span>
+      </div>
+
+      <!-- Renderer Studio 3D 360° -->
+      <model-viewer
+        #modelViewerRef
+        [attr.src]="selectedVariant?.modelUrl"
+        [attr.poster]="selectedVariant?.thumbnailUrl"
+        alt="Monture Optique 3D Haute Définition Fittingbox"
+        camera-controls
+        auto-rotate
+        rotation-per-second="25deg"
+        environment-image="neutral"
+        shadow-intensity="1.2"
+        shadow-softness="0.7"
+        exposure="1.05"
+        interaction-prompt="auto">
+      </model-viewer>
+
+      <!-- Contrôles Studio bas -->
+      <div class="studio-controls-bar">
+        <span class="hint-text">🖱️ Touchez ou glissez pour pivoter à 360°</span>
+      </div>
+    </div>
+
+    <!-- 2. MODE ESSAYAGE VIRTUEL (CAMÉRA WEBRTC / MODÈLE VISAGE) -->
+    <div class="stage-view live-vto-view" *ngIf="activeMode === 'livevto'">
+      
+      <!-- Stream Caméra Live -->
+      <div class="camera-viewport" style="position: relative; width: 100%; max-width: 800px; margin: 0 auto; min-height: 400px; background: #000; border-radius: 12px; overflow: hidden;">
+        <video #videoElement class="video-feed" playsinline muted [class.hidden]="!isCameraActive" style="width: 100%; height: auto; display: block; transform: scaleX(-1);"></video>
+        <!-- Canvas WebGL Three.js Overlay -->
+        <canvas #vtoCanvas class="ar-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none;"></canvas>
+
+        <!-- Modèle photo alternatif si pas de caméra -->
+        <img *ngIf="!isCameraActive && activeModelFace" [src]="activeModelFace" alt="Visage Modèle" class="model-face-img" style="width: 100%;" />
+
+        <!-- Guide d'alignement du visage Fittingbox (Oval Guide) -->
+        <div class="face-guide-oval" *ngIf="isCameraActive" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none;">
+          <div class="oval-border" style="width: 200px; height: 300px; border: 2px dashed rgba(255,255,255,0.6); border-radius: 50%;"></div>
+          <span class="guide-text" style="color: white; font-size: 14px; display: block; text-align: center; margin-top: 10px; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">Centrez votre visage dans l'ovale</span>
+        </div>
+
+        <!-- Spinner de chargement caméra -->
+        <div class="vto-loader" *ngIf="isCameraLoading">
+          <div class="spinner"></div>
+          <span>Activation de la caméra...</span>
+        </div>
+      </div>
+
+      <!-- Contrôles de Réglage & Fitting -->
+      <div class="vto-controls-panel">
+        <div class="control-row">
+          <label>Taille :</label>
+          <button (click)="scaleFactor = scaleFactor - 0.05">-</button>
+          <span class="val">{{ (scaleFactor * 100).toFixed(0) }}%</span>
+          <button (click)="scaleFactor = scaleFactor + 0.05">+</button>
+
+          <label class="margin-left">Position H :</label>
+          <button (click)="verticalOffset = verticalOffset - 3">▲</button>
+          <button (click)="verticalOffset = verticalOffset + 3">▼</button>
+          
+          <button class="reset-btn" (click)="resetAdjustments()">Réinitialiser</button>
+        </div>
+
+        <!-- Sélecteur de mannequins photo si caméra désactivée/refusée -->
+        <div class="demo-models-selector" *ngIf="!isCameraActive">
+          <span class="selector-label">Ou essayez sur nos mannequins :</span>
+          <div class="face-thumbnails">
+            <button
+              *ngFor="let face of demoFaces"
+              class="face-thumb-btn"
+              [class.selected]="activeModelFace === face.url"
+              (click)="selectDemoFace(face.url)">
+              <img [src]="face.url" [alt]="face.name" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Bouton Capturer Photo -->
+        <button class="snapshot-btn" (click)="takeSnapshot()">
+          📸 Capturer mon essayage
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre de Sélection des Déclinaisons / Couleurs (Style Fittingbox) -->
+  <div class="fbx-variants-bar">
+    <span class="variants-title">Déclinaisons Couleurs :</span>
+    <div class="swatches-container">
+      <button
+        *ngFor="let v of variants"
+        class="swatch-btn"
+        [class.active]="v.id === selectedVariant?.id"
+        [title]="v.colorName"
+        (click)="selectVariant(v)">
+        <span class="swatch-color" [style.background-color]="v.colorHex"></span>
+        <span class="swatch-name">{{ v.colorName }}</span>
+      </button>
+    </div>
+    <div class="variant-price" *ngIf="selectedVariant">
+      {{ selectedVariant.price }} TND
+    </div>
+  </div>
+</div>

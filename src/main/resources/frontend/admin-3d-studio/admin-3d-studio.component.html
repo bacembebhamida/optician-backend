@@ -1,0 +1,145 @@
+<div class="admin-studio-wrapper">
+  
+  <div class="header-banner">
+    <div class="title-group">
+      <h1>3D PRODUCT STUDIO</h1>
+      <span class="subtitle">OptiVision Professional Quality Gate</span>
+    </div>
+    
+    <div class="status-badge" [ngClass]="assetStatus.toLowerCase()">
+      {{ assetStatus.replace('_', ' ') }}
+    </div>
+  </div>
+
+  <div class="studio-content">
+    
+    <!-- Left Column: Source Images & Visual Comparison -->
+    <div class="column-left">
+      <div class="panel">
+        <h2>Comparaison Visuelle (Original vs 3D)</h2>
+        
+        <div class="view-selector">
+          <button [class.active]="activeView === 'front'" (click)="setActiveView('front')">FRONT</button>
+          <button [class.active]="activeView === 'three_quarter'" (click)="setActiveView('three_quarter')">3/4</button>
+          <button [class.active]="activeView === 'side'" (click)="setActiveView('side')">SIDE</button>
+          <button [class.active]="activeView === 'back'" (click)="setActiveView('back')">BACK</button>
+        </div>
+
+        <div class="comparison-stage">
+          <div class="img-box src-img">
+            <span class="label">IMAGE SOURCE</span>
+            <img [src]="'assets/demo/source_' + activeView + '.jpg'" alt="Source" onerror="this.src='assets/images/placeholder.png'">
+          </div>
+          
+          <div class="img-box render-img">
+            <span class="label">RENDU 3D VALIDATION</span>
+            <img [src]="'/uploads/models/eyewear_v3_render_' + activeView + '.png'" alt="3D Render" onerror="this.src='assets/images/placeholder3d.png'">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel dimensions-panel">
+        <h2>Dimensions Physiques (Source de Vérité DB)</h2>
+        <div class="dim-grid">
+          <div class="dim-item"><label>Lens Width (A)</label><span>{{ lensWidth }} mm</span></div>
+          <div class="dim-item"><label>Bridge (B)</label><span>{{ bridgeWidth }} mm</span></div>
+          <div class="dim-item"><label>Temple (C)</label><span>{{ templeLength }} mm</span></div>
+          <div class="dim-item"><label>Total Width</label><span>{{ totalWidth }} mm</span></div>
+          <div class="dim-item"><label>Lens Height</label><span>{{ lensHeight }} mm</span></div>
+        </div>
+        <p class="dim-notice">⚠️ Le GLB est généré à l'échelle métrique exacte (1 unit = 1m) en fonction de ces dimensions.</p>
+      </div>
+    </div>
+
+    <!-- Center Column: 3D Preview Interactive -->
+    <div class="column-center">
+      <div class="panel preview-panel">
+        <h2>3D PREVIEW INTÉRACTIVE</h2>
+        
+        <div class="viewer-container">
+          <model-viewer
+            [attr.src]="modelUrl"
+            camera-controls
+            auto-rotate
+            rotation-per-second="20deg"
+            environment-image="neutral"
+            shadow-intensity="1.2"
+            shadow-softness="0.5"
+            exposure="1.0">
+          </model-viewer>
+        </div>
+
+        <div class="action-bar main-actions">
+          <button class="btn btn-secondary" (click)="regenerate3d()">REGENERATE</button>
+          <button class="btn btn-danger" (click)="rejectAsset()" *ngIf="assetStatus !== 'REJECTED'">REJECT</button>
+          <button class="btn btn-warning" (click)="validateAsset()" *ngIf="assetStatus === 'NEEDS_REVIEW' || assetStatus === 'REJECTED'">VALIDATE</button>
+          <button class="btn btn-success" (click)="publishAsset()" *ngIf="assetStatus === 'VALIDATED'">PUBLISH</button>
+        </div>
+        
+        <div class="status-msg" *ngIf="statusMessage" [class.success]="statusMessage.includes('✅') || statusMessage.includes('🚀')" [class.error]="statusMessage.includes('❌')">
+          {{ statusMessage }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Quality Score & Calibration -->
+    <div class="column-right">
+      <div class="panel score-panel">
+        <div class="score-header">
+          <h2>QUALITY SCORE</h2>
+          <div class="score-circle" [ngClass]="scores.overall >= 85 ? 'excellent' : (scores.overall >= 70 ? 'good' : 'poor')">
+            {{ scores.overall }}<span>/100</span>
+          </div>
+        </div>
+        
+        <ul class="score-breakdown">
+          <li><span>Geometry</span> <strong>{{ scores.geometry }}</strong> <span class="check" *ngIf="scores.geometry >= 80">✓</span></li>
+          <li><span>Dimensions</span> <strong>{{ scores.dimensions }}</strong> <span class="check" *ngIf="scores.dimensions >= 80">✓</span></li>
+          <li><span>Materials</span> <strong>{{ scores.materials }}</strong> <span class="check" *ngIf="scores.materials >= 80">✓</span></li>
+          <li><span>Textures</span> <strong>{{ scores.textures }}</strong> <span class="check" *ngIf="scores.textures >= 80">✓</span></li>
+          <li><span>Symmetry</span> <strong>{{ scores.symmetry }}</strong> <span class="check" *ngIf="scores.symmetry >= 80">✓</span></li>
+          <li><span>Visual Similarity</span> <strong>{{ scores.visualSimilarity }}</strong> <span class="check" *ngIf="scores.visualSimilarity >= 80">✓</span></li>
+          <li><span>VTO Fit (Scale)</span> <strong>{{ scores.vtoFit }}</strong> <span class="check" *ngIf="scores.vtoFit >= 80">✓</span></li>
+        </ul>
+      </div>
+
+      <div class="panel calibration-panel">
+        <h2>CALIBRATION FINE VTO</h2>
+        
+        <div class="slider-group">
+          <label>Scale Factor ({{ scale | number:'1.2-2' }})</label>
+          <input type="range" min="0.8" max="1.2" step="0.01" [(ngModel)]="scale">
+        </div>
+        
+        <div class="slider-group">
+          <label>Vertical Offset Y ({{ positionY | number:'1.1-1' }} mm)</label>
+          <input type="range" min="-15" max="15" step="0.5" [(ngModel)]="positionY">
+        </div>
+        
+        <div class="slider-group">
+          <label>Bridge / Depth Z ({{ positionZ | number:'1.1-1' }} mm)</label>
+          <input type="range" min="-20" max="20" step="0.5" [(ngModel)]="positionZ">
+        </div>
+
+        <button class="btn btn-outline" (click)="saveCalibration()" [disabled]="isSaving">
+          {{ isSaving ? 'Saving...' : 'SAVE CALIBRATION' }}
+        </button>
+      </div>
+
+      <div class="panel history-panel">
+        <h2>VERSIONS HISTORY</h2>
+        <ul class="version-list">
+          <li *ngFor="let v of versions" 
+              [class.active]="v.modelUrl === modelUrl"
+              (click)="selectVersion(v)">
+            <span class="v-name">v{{ v.version }}</span>
+            <span class="v-status" [ngClass]="v.status.toLowerCase()">{{ v.status }}</span>
+            <span class="v-score">Score: {{ v.qualityScore }}</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
+  </div>
+</div>

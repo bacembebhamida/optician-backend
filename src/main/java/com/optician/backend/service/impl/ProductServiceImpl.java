@@ -89,6 +89,20 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
+        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            for (ProductImageDto imgDto : dto.getImages()) {
+                if (imgDto.getUrl() == null || imgDto.getUrl().isBlank()) continue;
+                com.optician.backend.model.ProductImage productImg = com.optician.backend.model.ProductImage.builder()
+                        .product(product)
+                        .url(imgDto.getUrl())
+                        .altText(imgDto.getAltText())
+                        .displayOrder(imgDto.getDisplayOrder() != null ? imgDto.getDisplayOrder() : 0)
+                        .primaryImage(imgDto.getPrimaryImage() != null ? imgDto.getPrimaryImage() : false)
+                        .build();
+                product.getImages().add(productImg);
+            }
+        }
+
         if (product.getProductType() != ProductType.CONTACT_LENSES) {
             product.setTryOn3dAvailable(true);
             product.setVirtualTryOnEnabled(true);
@@ -178,6 +192,21 @@ public class ProductServiceImpl implements ProductService {
 
         resolveBrandAndCategory(dto, product);
 
+        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            product.getImages().clear();
+            for (ProductImageDto imgDto : dto.getImages()) {
+                if (imgDto.getUrl() == null || imgDto.getUrl().isBlank()) continue;
+                com.optician.backend.model.ProductImage productImg = com.optician.backend.model.ProductImage.builder()
+                        .product(product)
+                        .url(imgDto.getUrl())
+                        .altText(imgDto.getAltText())
+                        .displayOrder(imgDto.getDisplayOrder() != null ? imgDto.getDisplayOrder() : 0)
+                        .primaryImage(imgDto.getPrimaryImage() != null ? imgDto.getPrimaryImage() : false)
+                        .build();
+                product.getImages().add(productImg);
+            }
+        }
+
         Product saved = productRepository.save(product);
 
         auditService.logAudit(AuditAction.UPDATE, "Product", saved.getId(), oldVal, "Updated product " + saved.getName());
@@ -248,11 +277,21 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
-        // Soft Delete
-        product.setActive(false);
-        productRepository.save(product);
+        auditService.logAudit(AuditAction.DELETE, "Product", id, "Name: " + product.getName(), "Deleted");
+        productRepository.delete(product);
+    }
 
-        auditService.logAudit(AuditAction.DELETE, "Product", id, "Name: " + product.getName(), "Soft deleted (active=false)");
+    @Override
+    @Transactional
+    public void bulkDeleteProducts(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return;
+        for (Long id : ids) {
+            try {
+                deleteProduct(id);
+            } catch (ResourceNotFoundException e) {
+                log.warn("Cannot bulk delete product id {} because not found", id);
+            }
+        }
     }
 
     @Override
@@ -291,8 +330,14 @@ public class ProductServiceImpl implements ProductService {
                 String shapeStr = product.getFrameShape() != null ? product.getFrameShape().name() : "CARRE";
                 if (pythonScript.exists()) {
                     ProcessBuilder pb = new ProcessBuilder("python3", "scripts/reconstruct_3d.py", "--output", glbFile.getAbsolutePath(), "--shape", shapeStr);
-                    Process proc = pb.start();
-                    proc.waitFor();
+                    new Thread(() -> {
+                        try {
+                            Process proc = pb.start();
+                            proc.waitFor();
+                        } catch (Exception e) {
+                            log.warn("Erreur asynchrone reconstruction 3d: {}", e.getMessage());
+                        }
+                    }).start();
                 }
             }
         } catch (Exception e) {

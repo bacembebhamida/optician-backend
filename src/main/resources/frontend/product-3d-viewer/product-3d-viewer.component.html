@@ -1,0 +1,49 @@
+<div class="viewer-container">
+  <!-- Badge dimensions physiques -->
+  <div class="dimensions-badge" *ngIf="lensWidth && bridgeWidth && templeLength">
+    <span class="badge-icon">📏</span>
+    <span>{{ lensWidth }}◽{{ bridgeWidth }}-{{ templeLength }} mm</span>
+  </div>
+
+  <!-- Intégration model-viewer avec chargement paresseux -->
+  <model-viewer
+    #modelViewerRef
+    [attr.src]="modelUrl"
+    [attr.poster]="posterUrl"
+    [attr.alt]="altText"
+    loading="lazy"
+    reveal="interaction"
+    camera-controls
+    auto-rotate
+    rotation-per-second="30deg"
+    environment-image="neutral"
+    shadow-intensity="1"
+    shadow-softness="0.8"
+    exposure="1.0"
+    interaction-prompt="auto"
+    (load)="onModelLoaded()"
+    (error)="onModelError($event)">
+    
+    <!-- Bouton AR / Réalité Augmentée sur Mobile si supporté -->
+    <button slot="ar-button" class="ar-button">
+      👓 Essayer en Réalité Augmentée
+    </button>
+
+    <!-- Overlay de chargement progressif -->
+    <div slot="poster" class="poster-overlay" *ngIf="isLoading && !hasError">
+      <img [src]="posterUrl" [alt]="altText" class="poster-image" />
+      <div class="spinner-container">
+        <div class="spinner"></div>
+        <span class="loading-text">Chargement du modèle 3D...</span>
+      </div>
+    </div>
+  </model-viewer>
+
+  <!-- Message d'erreur de chargement avec fallback -->
+  <div class="error-fallback" *ngIf="hasError">
+    <img [src]="posterUrl" [alt]="altText" class="fallback-image" />
+    <div class="error-banner">
+      <p>Aperçu 3D temporairement indisponible.</p>
+    </div>
+  </div>
+</div>

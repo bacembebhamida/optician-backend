@@ -63,10 +63,20 @@ public class VirtualTryOnAsset {
     @Column(length = 2000)
     private String statusDetails;
 
+    // Visual Comparison Test Renders & Similarity
+    @Builder.Default
+    private Integer visualSimilarityScore = 88;
+    private String renderFrontUrl;
+    private String renderThreeQuarterUrl;
+    private String renderSideUrl;
+    private String renderBackUrl;
+
     // Optical Dimensions (mm)
     private Integer opticalLensWidth;
     private Integer opticalBridgeWidth;
     private Integer opticalTempleLength;
+    private Integer opticalTotalWidth;
+    private Integer opticalLensHeight;
 
     // Paramètres de calibration 3D
     @Builder.Default

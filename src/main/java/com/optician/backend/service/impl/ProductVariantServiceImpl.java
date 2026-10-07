@@ -49,6 +49,20 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         ProductVariant variant = variantMapper.toEntity(dto);
         variant.setProduct(product);
 
+        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            for (com.optician.backend.dto.ProductImageDto imgDto : dto.getImages()) {
+                if (imgDto.getUrl() == null || imgDto.getUrl().isBlank()) continue;
+                com.optician.backend.model.ProductImage variantImg = com.optician.backend.model.ProductImage.builder()
+                        .variant(variant)
+                        .url(imgDto.getUrl())
+                        .altText(imgDto.getAltText())
+                        .displayOrder(imgDto.getDisplayOrder() != null ? imgDto.getDisplayOrder() : 0)
+                        .primaryImage(imgDto.getPrimaryImage() != null ? imgDto.getPrimaryImage() : false)
+                        .build();
+                variant.getImages().add(variantImg);
+            }
+        }
+
         ProductVariant saved = variantRepository.save(variant);
 
         autoGenerate3dAssetForVariant(product, saved);
@@ -120,6 +134,21 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         if (dto.getSellingPrice() != null) variant.setSellingPrice(dto.getSellingPrice());
         if (dto.getActive() != null) variant.setActive(dto.getActive());
         if (dto.getStock() != null) variant.setStock(dto.getStock());
+
+        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            variant.getImages().clear();
+            for (com.optician.backend.dto.ProductImageDto imgDto : dto.getImages()) {
+                if (imgDto.getUrl() == null || imgDto.getUrl().isBlank()) continue;
+                com.optician.backend.model.ProductImage variantImg = com.optician.backend.model.ProductImage.builder()
+                        .variant(variant)
+                        .url(imgDto.getUrl())
+                        .altText(imgDto.getAltText())
+                        .displayOrder(imgDto.getDisplayOrder() != null ? imgDto.getDisplayOrder() : 0)
+                        .primaryImage(imgDto.getPrimaryImage() != null ? imgDto.getPrimaryImage() : false)
+                        .build();
+                variant.getImages().add(variantImg);
+            }
+        }
 
         ProductVariant saved = variantRepository.save(variant);
 

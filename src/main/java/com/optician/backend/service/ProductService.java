@@ -17,5 +17,6 @@ public interface ProductService {
     ProductResponseDto updateProduct(Long id, ProductRequestDto dto);
     ProductResponseDto patchProduct(Long id, Map<String, Object> updates);
     void deleteProduct(Long id);
+    void bulkDeleteProducts(List<Long> ids);
     ProductResponseDto toggleProductActive(Long id, boolean active);
 }

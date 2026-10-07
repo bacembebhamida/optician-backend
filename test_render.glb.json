@@ -1,0 +1,28 @@
+{
+  "outputGlb": "test_render.glb",
+  "shape": "RECTANGULAIRE",
+  "scores": {
+    "overall": 91,
+    "geometry": 94,
+    "dimensions": 96,
+    "materials": 92,
+    "textures": 88,
+    "symmetry": 98,
+    "visualSimilarity": 75,
+    "vtoFit": 92,
+    "gatePassed": true
+  },
+  "renders": {
+    "renderFrontUrl": "/uploads/models/test_render_render_front.png",
+    "renderThreeQuarterUrl": "/uploads/models/test_render_render_threequarter.png",
+    "renderSideUrl": "/uploads/models/test_render_render_side.png",
+    "renderBackUrl": "/uploads/models/test_render_render_back.png"
+  },
+  "opticalSpecs": {
+    "lensWidthMm": 52,
+    "bridgeWidthMm": 18,
+    "templeLengthMm": 140,
+    "totalWidthMm": 138
+  },
+  "statusDetails": "Reconstruction param\u00e9trique r\u00e9ussie. Quality Gate Score: 91/100. Structure GLB: FrameFront, LensLeft, LensRight, Bridge, TempleLeft, TempleRight, Hinges."
+}

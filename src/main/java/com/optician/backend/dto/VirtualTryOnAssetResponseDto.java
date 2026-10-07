@@ -31,12 +31,19 @@ public class VirtualTryOnAssetResponseDto {
     private Integer symmetryScore;
     private Integer scaleScore;
     private Integer materialScore;
+    private Integer visualSimilarityScore;
+    private String renderFrontUrl;
+    private String renderThreeQuarterUrl;
+    private String renderSideUrl;
+    private String renderBackUrl;
     private String statusDetails;
 
     // Optical Dimensions (mm)
     private Integer opticalLensWidth;
     private Integer opticalBridgeWidth;
     private Integer opticalTempleLength;
+    private Integer opticalTotalWidth;
+    private Integer opticalLensHeight;
 
     // Calibration 3D
     private Double scale;

@@ -82,7 +82,10 @@ public class VirtualTryOnAssetController {
     @GetMapping(value = {
         "/tryon/variants/{variantId}/all",
         "/variants/{variantId}/try-on/all",
-        "/variants/{variantId}/try-on"
+        "/variants/{variantId}/try-on",
+        "/tryon/products/{variantId}/all",
+        "/products/{variantId}/try-on/all",
+        "/products/{variantId}/try-on"
     })
     public ResponseEntity<List<VirtualTryOnAssetResponseDto>> getAllAssetsForVariant(@PathVariable String variantId) {
         try {
@@ -96,11 +99,56 @@ public class VirtualTryOnAssetController {
     }
 
     /**
+     * Admin 3D Studio : Données complètes de contrôle qualité 3D pour la variante.
+     */
+    @GetMapping(value = {
+        "/tryon/variants/{variantId}/studio", 
+        "/admin/variants/{variantId}/3d-data",
+        "/tryon/products/{variantId}/studio", 
+        "/admin/products/{variantId}/3d-data"
+    })
+    public ResponseEntity<Map<String, Object>> getAdmin3dStudioData(@PathVariable String variantId) {
+        Long id = resolveVariantId(variantId);
+        ProductVariant variant = variantRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Variante introuvable: " + id));
+
+        Product product = variant.getProduct();
+        List<VirtualTryOnAssetResponseDto> assets = tryOnAssetService.getAssetsByVariantId(id);
+
+        VirtualTryOnAssetResponseDto currentAsset = null;
+        if (!assets.isEmpty()) {
+            currentAsset = assets.stream().filter(a -> a.getStatus() == TryOnAssetStatus.PUBLISHED).findFirst()
+                    .orElse(assets.get(0));
+        }
+
+        Map<String, Object> studioData = new HashMap<>();
+        studioData.put("variantId", variant.getId());
+        studioData.put("variantSku", variant.getSku());
+        studioData.put("color", variant.getColor());
+        studioData.put("productName", product.getName());
+        studioData.put("brand", product.getBrand());
+        studioData.put("frameShape", product.getFrameShape() != null ? product.getFrameShape().name() : "CARRE");
+        studioData.put("frameMaterial", product.getMaterial());
+        studioData.put("opticalDimensions", Map.of(
+            "lensWidth", currentAsset != null && currentAsset.getOpticalLensWidth() != null ? currentAsset.getOpticalLensWidth() : 52,
+            "bridgeWidth", currentAsset != null && currentAsset.getOpticalBridgeWidth() != null ? currentAsset.getOpticalBridgeWidth() : 18,
+            "templeLength", currentAsset != null && currentAsset.getOpticalTempleLength() != null ? currentAsset.getOpticalTempleLength() : 140,
+            "totalWidth", currentAsset != null && currentAsset.getOpticalTotalWidth() != null ? currentAsset.getOpticalTotalWidth() : 138,
+            "lensHeight", currentAsset != null && currentAsset.getOpticalLensHeight() != null ? currentAsset.getOpticalLensHeight() : 42
+        ));
+        studioData.put("currentAsset", currentAsset);
+        studioData.put("assetsHistory", assets);
+
+        return ResponseEntity.ok(studioData);
+    }
+
+    /**
      * Obtenir le modèle 3D publié pour l'essayage virtuel à partir de l'ID variante.
      */
     @GetMapping(value = {
         "/tryon/variants/{variantId}",
-        "/variants/{variantId}/try-on/published"
+        "/variants/{variantId}/try-on/published",
+        "/products/{variantId}/try-on/published"
     })
     public ResponseEntity<VirtualTryOnAssetResponseDto> getAssetForVariant(@PathVariable String variantId) {
         Long id = resolveVariantId(variantId);
@@ -225,7 +273,12 @@ public class VirtualTryOnAssetController {
     /**
      * Upload d'un fichier 3D GLB pour une variante (Admin/Opticien).
      */
-    @PostMapping(value = {"/tryon/variants/{variantId}/upload", "/variants/{variantId}/try-on/upload"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = {
+        "/tryon/variants/{variantId}/upload", 
+        "/variants/{variantId}/try-on/upload",
+        "/tryon/products/{variantId}/upload",
+        "/products/{variantId}/try-on/upload"
+    }, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<VirtualTryOnAssetResponseDto> uploadGlbModel(
             @PathVariable String variantId,
             @RequestParam("file") MultipartFile file) {
@@ -240,7 +293,9 @@ public class VirtualTryOnAssetController {
      */
     @PostMapping(value = {
         "/tryon/variants/{variantId}/generate",
-        "/variants/{variantId}/try-on/generate"
+        "/variants/{variantId}/try-on/generate",
+        "/tryon/products/{variantId}/generate",
+        "/products/{variantId}/try-on/generate"
     }, consumes = MediaType.ALL_VALUE)
     public ResponseEntity<VirtualTryOnAssetResponseDto> generate3dFromImages(
             @PathVariable String variantId,
