@@ -38,6 +38,7 @@ public class VirtualTryOnAssetServiceImpl implements VirtualTryOnAssetService {
 
     private final VirtualTryOnAssetRepository assetRepository;
     private final ProductVariantRepository variantRepository;
+    private final com.optician.backend.repository.ProductRepository productRepository;
     private final VirtualTryOnAssetMapper assetMapper;
     private final ProductAuditService auditService;
     private final com.optician.backend.client.VirtualTryOnGenerationClient generationClient;
@@ -466,5 +467,33 @@ public class VirtualTryOnAssetServiceImpl implements VirtualTryOnAssetService {
             case "cat_eye": return "papillon";
             default: return "pantos";
         }
+    }
+
+    @Override
+    @Transactional
+    public void regenerateAllAssets() {
+        log.info("Suppression de tous les anciens modèles 3D et réinitialisation de la base de données...");
+        assetRepository.deleteAll();
+
+        List<Product> products = productRepository.findAll();
+        for (Product product : products) {
+            List<ProductVariant> variants = variantRepository.findByProductId(product.getId());
+            if (variants.isEmpty()) {
+                ProductVariant newVariant = ProductVariant.builder()
+                        .product(product)
+                        .sku(product.getReference() != null ? product.getReference() : "SKU-P" + product.getId())
+                        .color("Standard")
+                        .size("Standard")
+                        .sellingPrice(java.math.BigDecimal.ZERO)
+                        .active(true)
+                        .build();
+                variants = List.of(variantRepository.save(newVariant));
+            }
+
+            for (ProductVariant variant : variants) {
+                createAuto3dAssetForVariant(variant);
+            }
+        }
+        log.info("Régénération 3D lancée avec succès pour les {} produits du catalogue.", products.size());
     }
 }

@@ -27,4 +27,6 @@ public interface VirtualTryOnAssetService {
     VirtualTryOnAssetResponseDto getAssetByJobId(String jobId);
 
     void deleteAsset(Long assetId);
+
+    void regenerateAllAssets();
 }

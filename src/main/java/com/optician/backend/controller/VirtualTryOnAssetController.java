@@ -355,5 +355,21 @@ public class VirtualTryOnAssetController {
         VirtualTryOnAssetResponseDto result = tryOnAssetService.rejectAsset(assetId, reason);
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * Supprimer TOUS les modèles 3D et régénérer de zéro pour TOUS les produits.
+     */
+    @PostMapping(value = {
+        "/tryon/regenerate-all",
+        "/variants/try-on/regenerate-all",
+        "/products/try-on/regenerate-all"
+    })
+    public ResponseEntity<Map<String, Object>> regenerateAll3dModels() {
+        tryOnAssetService.regenerateAllAssets();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("message", "Tous les modèles 3D ont été supprimés et la régénération a été lancée pour tout le catalogue.");
+        return ResponseEntity.ok(response);
+    }
 }
 
