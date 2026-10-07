@@ -225,10 +225,20 @@ def build_expert_eyewear(shape_type, lens_w, bridge_w, temple_l, img_path=None):
     pts = generate_rim_contour(shape_type, w_m, h_m)
     center_offset = (w_m / 2.0) + (b_m / 2.0)
     
+    nose_pad_mat = PBRMaterial(
+        name="NosePadPBR",
+        baseColorFactor=[220, 230, 240, 180],
+        metallicFactor=0.0,
+        roughnessFactor=0.1,
+        alphaMode="BLEND"
+    )
+    
     for side, sign in [("Left", -1), ("Right", 1)]:
-        # 1. MONTURE TUBULAIRE HAUTE RÉSOLUTION
+        # 1. MONTURE TUBULAIRE HAUTE RÉSOLUTION (AVEC BISEAU / BEVEL)
+        # Biseau simulé en écrasant légèrement le cerclage sur l'axe Z
         rim = create_tubular_rim(pts, thickness, frame_mat)
-        rot_yaw = tf.rotation_matrix(sign * np.radians(4.0), [0, 1, 0])
+        rim.apply_transform(trimesh.transformations.scale_matrix(0.85, [0,0,1]))
+        rot_yaw = tf.rotation_matrix(sign * np.radians(6.0), [0, 1, 0])
         rim.apply_transform(rot_yaw)
         rim.apply_translation([sign * center_offset, 0, 0])
         scene.add_geometry(rim, node_name=f"Frame_Rim_{side}")
@@ -237,9 +247,9 @@ def build_expert_eyewear(shape_type, lens_w, bridge_w, temple_l, img_path=None):
         lens = create_lens_mesh(pts, glass_mat, curvature=3.5 if is_metal else 2.0)
         lens.apply_transform(rot_yaw)
         lens.apply_translation([sign * center_offset, 0, 0.0005])
-        scene.add_geometry(lens, node_name=f"Lens_{side}")
+        scene.add_geometry(lens, node_name=f"LENSES_{side}")
         
-        # 3. BRANCHES
+        # 3. BRANCHES (AVEC MANCHONS SCULPTÉS)
         temple = create_temple_mesh(t_m, frame_mat, thickness)
         hinge_x = sign * (center_offset + w_m / 2.0 + thickness / 2.0)
         temple_rot = tf.rotation_matrix(sign * np.radians(-2.5), [0, 1, 0])
@@ -247,7 +257,21 @@ def build_expert_eyewear(shape_type, lens_w, bridge_w, temple_l, img_path=None):
         temple.apply_translation([hinge_x, h_m / 4.0, 0])
         scene.add_geometry(temple, node_name=f"Frame_Temple_{side}")
 
-    # 4. PONT TUBULAIRE
+        # 4. PLAQUETTES NASALES (NOSE PADS PLASTIQUE)
+        if True: # Always add nosepads for better realism
+            pad_h = b_m * 0.8
+            pad_w = pad_h * 0.4
+            pad = trimesh.creation.capsule(height=pad_h, radius=pad_w)
+            pad.apply_transform(trimesh.transformations.scale_matrix(0.3, [0,0,1])) # Flatten it
+            pad.apply_transform(tf.rotation_matrix(np.radians(10.0), [1, 0, 0]))
+            pad.apply_transform(tf.rotation_matrix(sign * np.radians(20.0), [0, 0, 1]))
+            pad.apply_transform(tf.rotation_matrix(sign * np.radians(-25.0), [0, 1, 0]))
+            pad_x = sign * (center_offset - w_m / 2.0)
+            pad.apply_translation([pad_x, 0, -thickness * 1.5])
+            pad.visual.material = nose_pad_mat
+            scene.add_geometry(pad, node_name=f"Nose_Pad_{side}")
+
+    # 5. PONT TUBULAIRE
     bridge = trimesh.creation.cylinder(radius=thickness/2 * 0.8, height=b_m * 1.2, sections=16)
     bridge.apply_transform(tf.rotation_matrix(np.pi / 2, [0, 1, 0]))
     bridge.apply_translation([0, h_m / 6.0, 0.001])
